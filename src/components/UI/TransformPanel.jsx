@@ -40,7 +40,7 @@ export default function TransformPanel() {
   return (
     <div className="transform-panel" style={{
       position: 'absolute', right: 340, top: 20, 
-      background: 'rgba(15, 15, 26, 0.95)',
+      background: 'var(--bg-glass)',
       backdropFilter: 'blur(10px)',
       border: '1px solid rgba(124, 58, 237, 0.4)',
       boxShadow: '0 4px 12px rgba(0,0,0,0.5)',

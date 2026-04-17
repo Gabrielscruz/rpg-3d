@@ -3,6 +3,16 @@ import * as THREE from 'three'
 import useGameStore from '../../store/gameStore'
 import { GRID_SIZE, gridToWorld } from '../../utils/gridUtils'
 
+export const BOARD_COLORS = {
+  base: '#161626',      // Lighter than #0d0d1a
+  cellEven: '#22223b',  // Lighter than #1a1a2e
+  cellOdd: '#1a1a2e',   // Lighter than #16162a
+  blocked: '#2a2a3e',   // Lighter than #1e1e2e
+  occupied: '#3a3a5a',  // Lighter than #2a2a4a
+  gridLineAlpha: '#3a3a50',
+  gridLineBeta: '#2a2a40'
+}
+
 function GridCell({ x, z, isHighlighted, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, onClick }) {
   const ref = useRef()
   const pos = useMemo(() => gridToWorld(x, z), [x, z])
@@ -11,10 +21,10 @@ function GridCell({ x, z, isHighlighted, isOccupied, isBlocked, isSelected, isPl
     if (isPlacementMode && !isOccupied && !isBlocked) return '#7c3aed'
     if (isSelected) return '#7c3aed'
     if (isHighlighted) return highlightColor || '#22c55e'
-    if (isBlocked) return '#1e1e2e'
-    if (isOccupied) return '#2a2a4a'
+    if (isBlocked) return BOARD_COLORS.blocked
+    if (isOccupied) return BOARD_COLORS.occupied
     // Checkerboard pattern
-    return (x + z) % 2 === 0 ? '#1a1a2e' : '#16162a'
+    return (x + z) % 2 === 0 ? BOARD_COLORS.cellEven : BOARD_COLORS.cellOdd
   }, [isHighlighted, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, x, z])
 
   const opacity = useMemo(() => {
@@ -167,7 +177,7 @@ export default function Board() {
       {/* Base plane */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
         <planeGeometry args={[borderSize + 0.5, borderSize + 0.5]} />
-        <meshStandardMaterial color="#0d0d1a" />
+        <meshStandardMaterial color={BOARD_COLORS.base} />
       </mesh>
 
       {/* Grid cells */}
@@ -175,7 +185,7 @@ export default function Board() {
 
       {/* Grid lines (subtle) */}
       <gridHelper
-        args={[GRID_SIZE, GRID_SIZE, '#2a2a3e', '#1e1e30']}
+        args={[GRID_SIZE, GRID_SIZE, BOARD_COLORS.gridLineAlpha, BOARD_COLORS.gridLineBeta]}
         position={[0, 0.02, 0]}
       />
     </group>
