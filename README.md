@@ -1,4 +1,4 @@
-# Let's Role 3D Clone - Roadmap & Arquitetura
+# RPG AÇÃO 3D  - Roadmap & Arquitetura
 
 Bem-vindo ao repositório do RPG Action 3D, um VTT (Virtual Tabletop) 3D colaborativo com sistema de papéis e controle de permissões (RBAC). A meta é construir uma plataforma semelhante ao Let's Role, com importação nativa de assets `glTF/.glb` e planos 2D interativos, além de ser facilmente escalável para regras específicas ou inventários robustos.
 
@@ -69,7 +69,7 @@ Este projeto adota uma arquitetura modular moderna, dividindo um Front-end rico 
 ### Backend (Banco de Dados e API)
 - **Supabase:** Nossa plataforma BaaS (Backend-as-a-Service) que entrega o **PostgreSQL** poderoso (com suporte nativo ao JSONB que decidimos usar nas fichas) além dos módulos vitais de Autenticação de Usuários e Storage de arquivos (para guardar os Assets 3D `.glb` ou mapas em `.png`).
 - **Prisma (ORM):** Modelagem de dados fluída, limpa, declarativa e tipagem estrita (via TypeScript/Node). Facilita na hora de interagir estruturadamente com as tabelas do PostgreSQL do Supabase.
-- **Fastify:** Framework Node.js ultra-rápido para microserviços do VTT que não entram na persistência do Socket, lidando pesadamente com cálculos de endpoints ou uploads mais densos.
+- **NestJS (com Fastify Adapter & WebSockets):** Framework Node.js robusto e progressivo com forte arquitetura orientada a módulos e injeção de dependências (inspirada no Angular). Configurado para rodar sobre o **Fastify** como motor HTTP, unindo uma organização estrutural impecável com performance extrema para as rotas da API e eventos em tempo real do VTT. Sincroniza perfeitamente com o Prisma ORM.
 
 ### Frontend (Já instaladas e rodando)
 - **React (Via Vite):** A fundação do ecossistema reativo do Dashboard, Menus e Paineis.
