@@ -10,7 +10,7 @@ const useGameStore = create((set, get) => ({
   currentTurnIndex: 0,
   round: 1,
   phase: 'setup', // 'setup' | 'move' | 'action' | 'end'
-  gameState: 'setup', // 'setup' | 'playing' | 'gameover'
+  gameState: 'setup', // 'menuInformation' | 'setup' | 'playing' | 'gameover'
   winner: null,
 
   // === Scenarios ===
@@ -25,6 +25,13 @@ const useGameStore = create((set, get) => ({
   combatLog: [],
   placementMode: null, // null | 'character' | 'scenario'
   placementId: null, // ID of the character or scenario being placed
+  showMusicPanel: false,
+  isMusicPanelMinimized: false,
+  musicPlayer: {
+    title: '',
+    subtitle: '',
+    youtubeVideoId: '',
+  },
 
   // === Actions: Characters ===
   addCharacter: (character) => {
@@ -348,6 +355,51 @@ const useGameStore = create((set, get) => ({
     combatLog: [...state.combatLog, { text, type }],
   })),
 
+  setGameState: (gameState) => set({ gameState }),
+
+  toggleMusicPanel: () => set((state) => {
+    if (!state.showMusicPanel) {
+      return {
+        showMusicPanel: true,
+        isMusicPanelMinimized: false,
+      }
+    }
+
+    if (state.isMusicPanelMinimized) {
+      return {
+        showMusicPanel: true,
+        isMusicPanelMinimized: false,
+      }
+    }
+
+    return {
+      showMusicPanel: true,
+      isMusicPanelMinimized: true,
+    }
+  }),
+
+  minimizeMusicPanel: () => set((state) => ({
+    showMusicPanel: state.showMusicPanel,
+    isMusicPanelMinimized: true,
+  })),
+
+  expandMusicPanel: () => set((state) => ({
+    showMusicPanel: true,
+    isMusicPanelMinimized: false,
+  })),
+
+  closeMusicPanel: () => set({
+    showMusicPanel: false,
+    isMusicPanelMinimized: false,
+  }),
+
+  setMusicPlayerConfig: (updates) => set((state) => ({
+    musicPlayer: {
+      ...state.musicPlayer,
+      ...updates,
+    },
+  })),
+
   // === Actions: Reset ===
   resetGame: () => set({
     characters: [],
@@ -366,6 +418,13 @@ const useGameStore = create((set, get) => ({
     combatLog: [],
     placementMode: null,
     placementId: null,
+    showMusicPanel: false,
+    isMusicPanelMinimized: false,
+    musicPlayer: {
+      title: '',
+      subtitle: '',
+      youtubeVideoId: '',
+    },
   }),
 
   restartBattle: () => {
@@ -391,8 +450,19 @@ const useGameStore = create((set, get) => ({
       combatLog: [],
       placementMode: null,
       placementId: null,
+      showMusicPanel: false,
+      isMusicPanelMinimized: false,
+      musicPlayer: {
+        title: '',
+        subtitle: '',
+        youtubeVideoId: '',
+      },
     })
   },
+
+  // === Actions: Buttons From Menu ===
+
+
 }))
 
 export default useGameStore

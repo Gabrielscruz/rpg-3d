@@ -7,6 +7,7 @@ import CharacterPanel from './components/UI/CharacterPanel'
 import CombatLog from './components/UI/CombatLog'
 import ImportModal from './components/UI/ImportModal'
 import GameOver from './components/UI/GameOver'
+import MusicPanel from './components/UI/MusicPanel'
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <CharacterPanel />
           <ActionBar />
           <CombatLog />
+          <MusicPanel />
         </div>
 
         {/* Sidebar */}
