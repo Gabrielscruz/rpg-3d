@@ -1,0 +1,33 @@
+{
+  "name": "rpg-acao-backend",
+  "version": "1.0.0",
+  "description": "Backend para o VTT usando NestJS, Fastify, Prisma e WebSockets.",
+  "private": true,
+  "scripts": {
+    "build": "nest build",
+    "start": "nest start",
+    "start:dev": "nest start --watch",
+    "start:debug": "nest start --debug --watch",
+    "start:prod": "node dist/main",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:generate": "prisma generate"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.3.3",
+    "@nestjs/core": "^10.3.3",
+    "@nestjs/platform-fastify": "^10.3.3",
+    "@nestjs/websockets": "^10.3.3",
+    "@nestjs/platform-ws": "^10.3.3",
+    "@prisma/client": "^5.10.0",
+    "reflect-metadata": "^0.2.1",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.3.2",
+    "@nestjs/schematics": "^10.1.1",
+    "@types/node": "^20.11.24",
+    "prisma": "^5.10.0",
+    "typescript": "^5.3.3"
+  }
+}

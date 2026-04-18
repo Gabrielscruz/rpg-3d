@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// FASE 1: MVP - Tabelas Essenciais do VTT
+// ============================================
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  username     String
+  passwordHash String
+  createdAt    DateTime      @default(now())
+
+  mesasCriadas Mesa[]        @relation("MesaOwner")
+  participacao MesaParticipante[]
+}
+
+model Mesa {
+  id          String   @id @default(uuid())
+  ownerId     String
+  name        String
+  description String?
+  configs     Json?    // Regras globais, jsonb
+  createdAt   DateTime @default(now())
+
+  owner         User               @relation("MesaOwner", fields: [ownerId], references: [id])
+  participantes MesaParticipante[]
+  cenas         Cena[]
+}
+
+model MesaParticipante {
+  id      String @id @default(uuid())
+  mesaId  String
+  userId  String
+  role    String // ex: 'MESTRE', 'JOGADOR', 'ESPECTADOR'
+
+  mesa Mesa @relation(fields: [mesaId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([mesaId, userId])
+}
+
+model Cena {
+  id       String  @id @default(uuid())
+  mesaId   String
+  name     String
+  isActive Boolean @default(false)
+  
+  mesa         Mesa          @relation(fields: [mesaId], references: [id])
+  sceneObjects SceneObject[]
+}
+
+model SceneObject {
+  id       String @id @default(uuid())
+  cenaId   String
+  ownerId  String? // Se null, é do mestre
+  tipo     String  // 'token_player', 'token_npc', 'map_image', 'prop_3d'
+  nome     String
+  assetUrl String
+  
+  // Transformações no Tabuleiro 3D
+  posX   Float @default(0)
+  posY   Float @default(0)
+  posZ   Float @default(0)
+  rotY   Float @default(0)
+  scaleX Float @default(1)
+  scaleY Float @default(1)
+  scaleZ Float @default(1)
+
+  cena Cena @relation(fields: [cenaId], references: [id])
+}
+
+model Personagem {
+  id        String @id @default(uuid())
+  mesaId    String
+  userId    String // Quem controla
+  nome      String
+  avatarUrl String?
+  hpMaximo  Int    @default(100)
+  hpAtual   Int    @default(100)
+  
+  // O JsonB permite que o sistema do RPG não seja hardcoded no MVP
+  sheetData Json?  @default("{}") 
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  mesaId    String
+  senderId  String
+  type      String   // 'texto', 'rolagem', 'sistema'
+  content   Json     // Conteúdo completo (dados puxados ou texto)
+  createdAt DateTime @default(now())
+}
