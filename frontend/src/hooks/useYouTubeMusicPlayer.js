@@ -36,6 +36,7 @@ export default function useYouTubeMusicPlayer() {
   const hasSource = Boolean(videoId || playlistId)
   const shouldKeepPlayerMounted = showMusicPanel || hasSource
   const shouldShowMiniPlayer = !showMusicPanel && hasSource
+  const hasResolvedPlaylist = Boolean(playlistId) && playlistItems.length > 0
 
   useEffect(() => {
     setInputValue(musicPlayer.youtubeVideoId)
@@ -65,7 +66,8 @@ export default function useYouTubeMusicPlayer() {
       } catch (error) {
         if (error.name === 'AbortError') return
         setPlaylistItems([])
-        setPlayerError(error.message || 'Nao foi possivel buscar os dados da playlist.')
+        setPlayerError('')
+        setStatusText('Nao foi possivel carregar os dados completos da playlist. Exibindo apenas a faixa atual.')
       }
     }
 
@@ -358,7 +360,7 @@ export default function useYouTubeMusicPlayer() {
   }
 
   const currentPlaylistIndex = playlistItems.findIndex(item => item.videoId === currentVideoId)
-  const enrichedUpcomingTracks = playlistItems.length > 0 && currentPlaylistIndex >= 0
+  const enrichedUpcomingTracks = hasResolvedPlaylist && currentPlaylistIndex >= 0
     ? playlistItems.slice(currentPlaylistIndex + 1, currentPlaylistIndex + 6)
     : []
 
@@ -373,14 +375,14 @@ export default function useYouTubeMusicPlayer() {
     playerContainerRef,
     playerError,
     playerReady,
-    playlistId,
+    playlistId: hasResolvedPlaylist ? playlistId : '',
     repeatTrack,
     setInputValue,
     setRepeatTrack,
     shouldShowMiniPlayer,
     showMusicPanel,
     statusText,
-    upcomingTracks: enrichedUpcomingTracks.length > 0 ? enrichedUpcomingTracks : upcomingTracks,
+    upcomingTracks: hasResolvedPlaylist ? enrichedUpcomingTracks : [],
     videoId,
     volume,
     musicPlayer,
