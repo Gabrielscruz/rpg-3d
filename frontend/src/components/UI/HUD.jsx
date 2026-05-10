@@ -7,6 +7,7 @@ export default function HUD() {
   const gameState = useGameStore(s => s.gameState)
   const characters = useGameStore(s => s.characters)
   const startGame = useGameStore(s => s.startGame)
+  const openCharacterCreator = useGameStore(s => s.openCharacterCreator)
   const toggleImportModal = useGameStore(s => s.toggleImportModal)
   const resetGame = useGameStore(s => s.resetGame)
   const restartBattle = useGameStore(s => s.restartBattle)
@@ -34,9 +35,9 @@ export default function HUD() {
           <>
             <button
               className="btn btn-primary"
-              onClick={() => toggleImportModal('character')}
+              onClick={openCharacterCreator}
             >
-              Personagem
+              Criador
             </button>
             <button
               className="btn btn-secondary"

@@ -6,6 +6,7 @@ import ActionBar from './components/UI/ActionBar'
 import CharacterPanel from './components/UI/CharacterPanel'
 import CombatLog from './components/UI/CombatLog'
 import ImportModal from './components/UI/ImportModal'
+import CharacterCreator from './components/UI/CharacterCreator'
 import GameOver from './components/UI/GameOver'
 import MusicPanel from './components/UI/Music'
 
@@ -31,6 +32,7 @@ export default function App() {
 
       {/* Modals */}
       <ImportModal />
+      <CharacterCreator />
       <GameOver />
     </div>
   )

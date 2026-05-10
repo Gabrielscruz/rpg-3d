@@ -6,6 +6,7 @@ export default function Sidebar() {
   const selectedCharacterId = useGameStore(s => s.selectedCharacterId)
   const selectCharacter = useGameStore(s => s.selectCharacter)
   const removeCharacter = useGameStore(s => s.removeCharacter)
+  const openCharacterCreator = useGameStore(s => s.openCharacterCreator)
   const toggleImportModal = useGameStore(s => s.toggleImportModal)
   const gameState = useGameStore(s => s.gameState)
   const turnOrder = useGameStore(s => s.turnOrder)
@@ -24,22 +25,22 @@ export default function Sidebar() {
   return (
     <div className="sidebar">
       <div className="sidebar-header">
-        <h2>⚔️ Personagens</h2>
+        <h2>Personagens</h2>
         {gameState === 'setup' && (
           <div style={{ display: 'flex', gap: 4 }}>
             <button
               className="btn-icon"
-              title="Adicionar Personagem"
-              onClick={() => toggleImportModal('character')}
+              title="Abrir Criador"
+              onClick={openCharacterCreator}
             >
-              👤
+              C
             </button>
             <button
               className="btn-icon"
-              title="Adicionar Cenário"
+              title="Adicionar Cenario"
               onClick={() => toggleImportModal('scenario')}
             >
-              🏰
+              O
             </button>
           </div>
         )}
@@ -48,12 +49,11 @@ export default function Sidebar() {
       <div className="sidebar-content">
         {characters.length === 0 ? (
           <div className="empty-state">
-            <div className="icon">🎭</div>
-            <p>Nenhum personagem ainda.<br />Importe seus modelos GLB do Meshy!</p>
+            <div className="icon">3D</div>
+            <p>Nenhum personagem ainda.<br />Abra o criador dedicado para montar seu heroi.</p>
           </div>
         ) : (
           <>
-            {/* Team A */}
             {characters.filter(c => c.team === 'A').length > 0 && (
               <>
                 <div style={{
@@ -69,7 +69,7 @@ export default function Sidebar() {
                     onClick={() => selectCharacter(char.id)}
                   >
                     <div className="char-card-header">
-                      <div className={`char-avatar team-a`}>
+                      <div className="char-avatar team-a">
                         {char.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="char-card-name">{char.name}</span>
@@ -77,7 +77,7 @@ export default function Sidebar() {
                         <span style={{
                           fontSize: 10, color: 'var(--accent-gold)', fontWeight: 700,
                           animation: 'pulseGlow 1s infinite alternate'
-                        }}>⚡ TURNO</span>
+                        }}>TURNO</span>
                       )}
                       {gameState === 'setup' && (
                         <button
@@ -85,27 +85,23 @@ export default function Sidebar() {
                           style={{ width: 24, height: 24, fontSize: 12 }}
                           onClick={(e) => { e.stopPropagation(); removeCharacter(char.id) }}
                           title="Remover"
-                        >✕</button>
+                        >x</button>
                       )}
                     </div>
                     <div className="hp-bar-container">
-                      <div
-                        className={`hp-bar ${getHpClass(char)}`}
-                        style={{ width: `${getHpPercent(char)}%` }}
-                      />
+                      <div className={`hp-bar ${getHpClass(char)}`} style={{ width: `${getHpPercent(char)}%` }} />
                     </div>
                     <div className="hp-text">{char.hp} / {char.maxHp} HP</div>
                     <div className="char-stats-mini">
-                      <div className="stat-mini">⚔ <span>{char.attack}</span></div>
-                      <div className="stat-mini">🛡 <span>{char.defense}</span></div>
-                      <div className="stat-mini">💨 <span>{char.speed}</span></div>
+                      <div className="stat-mini">ATK <span>{char.attack}</span></div>
+                      <div className="stat-mini">DEF <span>{char.defense}</span></div>
+                      <div className="stat-mini">SPD <span>{char.speed}</span></div>
                     </div>
                   </div>
                 ))}
               </>
             )}
 
-            {/* Team B */}
             {characters.filter(c => c.team === 'B').length > 0 && (
               <>
                 <div style={{
@@ -121,14 +117,12 @@ export default function Sidebar() {
                     onClick={() => selectCharacter(char.id)}
                   >
                     <div className="char-card-header">
-                      <div className={`char-avatar team-b`}>
+                      <div className="char-avatar team-b">
                         {char.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="char-card-name">{char.name}</span>
                       {currentTurnId === char.id && gameState === 'playing' && (
-                        <span style={{
-                          fontSize: 10, color: 'var(--accent-gold)', fontWeight: 700,
-                        }}>⚡ TURNO</span>
+                        <span style={{ fontSize: 10, color: 'var(--accent-gold)', fontWeight: 700 }}>TURNO</span>
                       )}
                       {gameState === 'setup' && (
                         <button
@@ -136,20 +130,17 @@ export default function Sidebar() {
                           style={{ width: 24, height: 24, fontSize: 12 }}
                           onClick={(e) => { e.stopPropagation(); removeCharacter(char.id) }}
                           title="Remover"
-                        >✕</button>
+                        >x</button>
                       )}
                     </div>
                     <div className="hp-bar-container">
-                      <div
-                        className={`hp-bar ${getHpClass(char)}`}
-                        style={{ width: `${getHpPercent(char)}%` }}
-                      />
+                      <div className={`hp-bar ${getHpClass(char)}`} style={{ width: `${getHpPercent(char)}%` }} />
                     </div>
                     <div className="hp-text">{char.hp} / {char.maxHp} HP</div>
                     <div className="char-stats-mini">
-                      <div className="stat-mini">⚔ <span>{char.attack}</span></div>
-                      <div className="stat-mini">🛡 <span>{char.defense}</span></div>
-                      <div className="stat-mini">💨 <span>{char.speed}</span></div>
+                      <div className="stat-mini">ATK <span>{char.attack}</span></div>
+                      <div className="stat-mini">DEF <span>{char.defense}</span></div>
+                      <div className="stat-mini">SPD <span>{char.speed}</span></div>
                     </div>
                   </div>
                 ))}
