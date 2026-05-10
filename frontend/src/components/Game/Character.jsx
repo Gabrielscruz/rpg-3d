@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { SkeletonUtils } from 'three-stdlib'
 import useGameStore from '../../store/gameStore'
 import { gridToWorld } from '../../utils/gridUtils'
+import ProceduralCharacter from './ProceduralCharacter'
 
 function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isSelected, team }) {
   const wrapperRef = useRef()
@@ -86,39 +87,7 @@ function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isSele
 }
 
 function FallbackCharacter({ team, isSelected }) {
-  const ref = useRef()
-
-  useFrame((state) => {
-    if (ref.current) {
-      if (isSelected) {
-        ref.current.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.05 + 0.4
-      } else {
-        ref.current.position.y = 0.4
-      }
-    }
-  })
-
-  const color = team === 'A' ? '#3b82f6' : '#ef4444'
-
-  return (
-    <group ref={ref} position={[0, 0.4, 0]}>
-      {/* Body */}
-      <mesh>
-        <capsuleGeometry args={[0.15, 0.35, 8, 16]} />
-        <meshStandardMaterial color={color} metalness={0.3} roughness={0.5} />
-      </mesh>
-      {/* Head */}
-      <mesh position={[0, 0.35, 0]}>
-        <sphereGeometry args={[0.12, 16, 16]} />
-        <meshStandardMaterial color={color} metalness={0.3} roughness={0.5} />
-      </mesh>
-      {/* Indicator ring */}
-      <mesh position={[0, -0.25, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0.2, 0.28, 32]} />
-        <meshBasicMaterial color={isSelected ? '#fbbf24' : color} transparent opacity={0.7} />
-      </mesh>
-    </group>
-  )
+  return <ProceduralCharacter team={team} isSelected={isSelected} />
 }
 
 export default function Character({ character }) {
@@ -127,6 +96,7 @@ export default function Character({ character }) {
   const isSelected = selectedCharacterId === character.id
 
   const worldPos = useMemo(() => gridToWorld(character.gridX, character.gridZ), [character.gridX, character.gridZ])
+  const rotationY = useMemo(() => (character.rotationY || 0) * (Math.PI / 180), [character.rotationY])
 
   if (!character.alive) return null
 
@@ -143,19 +113,25 @@ export default function Character({ character }) {
       onPointerOver={() => { document.body.style.cursor = 'pointer' }}
       onPointerOut={() => { document.body.style.cursor = 'default' }}
     >
-      <Suspense fallback={<FallbackCharacter team={character.team} isSelected={isSelected} />}>
-        {character.modelUrl ? (
-          <CharacterModel
-            url={character.modelUrl}
-            scale={character.scale}
-            animationName={character.animationName}
-            isSelected={isSelected}
-            team={character.team}
-          />
-        ) : (
-          <FallbackCharacter team={character.team} isSelected={isSelected} />
-        )}
-      </Suspense>
+      <group rotation={[0, rotationY, 0]} scale={character.scale || [1, 1, 1]}>
+        <Suspense fallback={<FallbackCharacter team={character.team} isSelected={isSelected} />}>
+          {character.modelUrl ? (
+            <CharacterModel
+              url={character.modelUrl}
+              scale={[1, 1, 1]}
+              animationName={character.animationName}
+              isSelected={isSelected}
+              team={character.team}
+            />
+          ) : (
+            <ProceduralCharacter
+              team={character.team}
+              appearance={character.appearance}
+              isSelected={isSelected}
+            />
+          )}
+        </Suspense>
+      </group>
 
       {/* Selection ring */}
       {isSelected && (

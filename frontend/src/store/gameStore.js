@@ -21,6 +21,7 @@ const useGameStore = create((set, get) => ({
   highlightedCells: [],
   actionMode: null, // null | 'move' | 'attack'
   showImportModal: false,
+  showCharacterCreator: false,
   importType: 'character', // 'character' | 'scenario'
   combatLog: [],
   placementMode: null, // null | 'character' | 'scenario'
@@ -41,6 +42,8 @@ const useGameStore = create((set, get) => ({
       name: character.name || 'Guerreiro',
       modelUrl: character.modelUrl,
       modelFileName: character.modelFileName || '',
+      appearance: character.appearance || null,
+      characterSource: character.characterSource || (character.modelUrl ? 'imported' : 'builder'),
       team: character.team || 'A',
       gridX: -1, // pending placement
       gridZ: -1, // pending placement
@@ -351,6 +354,15 @@ const useGameStore = create((set, get) => ({
     importType: type || state.importType,
   })),
 
+  openCharacterCreator: () => set({
+    showCharacterCreator: true,
+    showImportModal: false,
+  }),
+
+  closeCharacterCreator: () => set({
+    showCharacterCreator: false,
+  }),
+
   addCombatLog: (text, type = 'info') => set((state) => ({
     combatLog: [...state.combatLog, { text, type }],
   })),
@@ -415,6 +427,7 @@ const useGameStore = create((set, get) => ({
     highlightedCells: [],
     actionMode: null,
     showImportModal: false,
+    showCharacterCreator: false,
     combatLog: [],
     placementMode: null,
     placementId: null,
@@ -450,6 +463,7 @@ const useGameStore = create((set, get) => ({
       combatLog: [],
       placementMode: null,
       placementId: null,
+      showCharacterCreator: false,
       showMusicPanel: false,
       isMusicPanelMinimized: false,
       musicPlayer: {
