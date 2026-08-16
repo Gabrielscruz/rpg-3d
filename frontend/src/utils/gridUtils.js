@@ -98,6 +98,35 @@ export function getAttackableCells(startX, startZ, range, characters, team) {
 }
 
 /**
+ * Get ALL cells within attack range (empty + enemy cells),
+ * used to display the red area-of-effect overlay.
+ */
+export function getAllCellsInRange(startX, startZ, range, characters, team) {
+  const enemySet = new Map()
+  for (const char of characters) {
+    if (!char.alive) continue
+    if (char.team === team) continue
+    const dist = getDistance(startX, startZ, char.gridX, char.gridZ)
+    if (dist <= range) {
+      enemySet.set(`${char.gridX},${char.gridZ}`, char.id)
+    }
+  }
+
+  const result = []
+  for (let x = Math.max(0, startX - range); x <= Math.min(GRID_SIZE - 1, startX + range); x++) {
+    for (let z = Math.max(0, startZ - range); z <= Math.min(GRID_SIZE - 1, startZ + range); z++) {
+      if (x === startX && z === startZ) continue // skip self
+      const dist = getDistance(startX, startZ, x, z)
+      if (dist > range) continue
+      const key = `${x},${z}`
+      const charId = enemySet.get(key)
+      result.push({ x, z, charId: charId || null, isRange: true })
+    }
+  }
+  return result
+}
+
+/**
  * Convert grid coordinates to world position
  */
 export function gridToWorld(gridX, gridZ) {

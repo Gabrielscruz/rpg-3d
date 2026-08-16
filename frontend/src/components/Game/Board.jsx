@@ -13,26 +13,29 @@ export const BOARD_COLORS = {
   gridLineBeta: '#2a2a40'
 }
 
-function GridCell({ x, z, isHighlighted, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, onClick }) {
+function GridCell({ x, z, isHighlighted, isRangeOnly, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, onClick }) {
   const ref = useRef()
   const pos = useMemo(() => gridToWorld(x, z), [x, z])
 
   const color = useMemo(() => {
     if (isPlacementMode && !isOccupied && !isBlocked) return '#7c3aed'
     if (isSelected) return '#7c3aed'
-    if (isHighlighted) return highlightColor || '#22c55e'
+    if (isHighlighted && !isRangeOnly) return highlightColor || '#22c55e'   // target / move
+    if (isRangeOnly) return '#ef4444'                                        // area vazia
     if (isBlocked) return BOARD_COLORS.blocked
     if (isOccupied) return BOARD_COLORS.occupied
-    // Checkerboard pattern
     return (x + z) % 2 === 0 ? BOARD_COLORS.cellEven : BOARD_COLORS.cellOdd
-  }, [isHighlighted, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, x, z])
+  }, [isHighlighted, isRangeOnly, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, x, z])
 
   const opacity = useMemo(() => {
     if (isPlacementMode && !isOccupied && !isBlocked) return 0.5
-    if (isHighlighted) return 0.6
+    if (isHighlighted && !isRangeOnly) return 0.7  // inimigo / tile de movimento: destaque forte
+    if (isRangeOnly) return 0.18                   // área de alcance: fraco e transparente
     if (isSelected) return 0.7
     return 0.4
-  }, [isHighlighted, isSelected, isPlacementMode, isOccupied, isBlocked])
+  }, [isHighlighted, isRangeOnly, isSelected, isPlacementMode, isOccupied, isBlocked])
+
+  const isClickable = (isHighlighted && !isRangeOnly) || (isPlacementMode && !isOccupied && !isBlocked)
 
   return (
     <mesh
@@ -48,8 +51,7 @@ function GridCell({ x, z, isHighlighted, isOccupied, isBlocked, isSelected, isPl
         if (ref.current) {
           ref.current.material.opacity = Math.min(opacity + 0.2, 0.9)
         }
-        const clickable = isHighlighted || (isPlacementMode && !isOccupied && !isBlocked)
-        document.body.style.cursor = clickable ? 'pointer' : 'default'
+        document.body.style.cursor = isClickable ? 'pointer' : 'default'
       }}
       onPointerOut={(e) => {
         e.stopPropagation()
@@ -128,7 +130,7 @@ export default function Board() {
 
     const highlighted = highlightSet.get(key)
 
-    if (actionMode === 'move' && highlighted && !highlighted.charId) {
+    if (actionMode === 'move' && highlighted && !highlighted.charId && !highlighted.isRange) {
       moveCharacter(currentChar.id, x, z)
     } else if (actionMode === 'attack' && highlighted && highlighted.charId) {
       attackCharacter(currentChar.id, highlighted.charId)
@@ -140,16 +142,19 @@ export default function Board() {
     for (let x = 0; x < GRID_SIZE; x++) {
       for (let z = 0; z < GRID_SIZE; z++) {
         const key = `${x},${z}`
-        const isHighlighted = highlightSet.has(key)
-        const highlightData = highlightSet.get(key)
-        const isOccupied = occupiedSet.has(key)
-        const isBlocked = blockedCells.has(key)
-        const isSelected = selectedChar && selectedChar.gridX === x && selectedChar.gridZ === z
+        const highlightData  = highlightSet.get(key)
+        const isHighlighted  = !!highlightData
+        const isOccupied     = occupiedSet.has(key)
+        const isBlocked      = blockedCells.has(key)
+        const isSelected     = selectedChar && selectedChar.gridX === x && selectedChar.gridZ === z
 
-        let highlightColor = '#22c55e'
-        if (highlightData?.charId) {
-          highlightColor = '#ef4444' // Attack target
-        }
+        // isRangeOnly = está na área de alcance MAS não é um inimigo atacável
+        const isRangeOnly    = isHighlighted && !!highlightData?.isRange && !highlightData?.charId
+        // isEnemy = está no alcance E tem um inimigo na célula
+        const isEnemy        = isHighlighted && !!highlightData?.charId
+
+        let highlightColor = '#22c55e'          // movimento: verde
+        if (isEnemy) highlightColor = '#ef4444' // inimigo no alcance: vermelho forte
 
         result.push(
           <GridCell
@@ -157,6 +162,7 @@ export default function Board() {
             x={x}
             z={z}
             isHighlighted={isHighlighted}
+            isRangeOnly={isRangeOnly}
             isOccupied={isOccupied}
             isBlocked={isBlocked}
             isSelected={isSelected}

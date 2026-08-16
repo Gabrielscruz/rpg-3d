@@ -15,9 +15,9 @@ export default function GameScene() {
     <Canvas
       camera={{
         position: [20, 25, 20],
-        fov: 50,
+        fov: 55,
         near: 0.1,
-        far: 200,
+        far: 300,
       }}
       shadows
       gl={{

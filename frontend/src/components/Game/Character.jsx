@@ -1,37 +1,68 @@
-import React, { useRef, useEffect, useMemo, Suspense } from 'react'
+import React, { useRef, useEffect, useState, useMemo, Suspense } from 'react'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { SkeletonUtils } from 'three-stdlib'
 import useGameStore from '../../store/gameStore'
 import { gridToWorld } from '../../utils/gridUtils'
+import { registerCharacterPosition, unregisterCharacterPosition, updateCharacterFacing } from '../../utils/characterRegistry'
 
-function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isSelected, team }) {
-  const wrapperRef = useRef()
+function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isMoving, isSelected, team }) {
+  const wrapperRef  = useRef()
   const animGroupRef = useRef()
   const { scene, animations } = useGLTF(url)
 
-  // Clone scene for this instance properly handling SkinnedMesh
-  const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene])
+  // Clone scene ONCE — SkeletonUtils.clone handles SkinnedMesh/Skeleton correctly
+  const clonedScene = useMemo(() => {
+    const clone = SkeletonUtils.clone(scene)
 
-  // Compute centering offset from bounding box (only once)
-  const offset = useMemo(() => {
-    const tempClone = SkeletonUtils.clone(scene)
-    const box = new THREE.Box3().setFromObject(tempClone)
-    const center = box.getCenter(new THREE.Vector3())
-    return {
-      x: -center.x,
-      y: -box.min.y, // sit on ground
-      z: -center.z,
+    // KayKit models have ALL alternate equipment meshes visible simultaneously.
+    // We hide the extras, keeping only the default loadout for each character.
+    const filename = url.split('/').pop()?.toLowerCase() ?? ''
+    const HIDDEN_NODES = {
+      'knight.glb':    ['1H_Sword_Offhand','Badge_Shield','Rectangle_Shield','Round_Shield','Spike_Shield','2H_Sword'],
+      'barbarian.glb': ['1H_Axe_Offhand','Barbarian_Round_Shield','2H_Axe','Mug'],
+      'mage.glb':      ['Spellbook','Spellbook_open','1H_Wand'],
+      'rogue.glb':     ['Knife_Offhand','1H_Crossbow','2H_Crossbow','Throwable'],
     }
-  }, [scene])
+    const toHide = new Set(HIDDEN_NODES[filename] ?? [])
+    if (toHide.size > 0) {
+      clone.traverse((obj) => {
+        if (toHide.has(obj.name)) {
+          obj.visible = false
+        }
+      })
+    }
 
-  // Strip root position/rotation tracks from animations to prevent them
-  // from overriding the grid position (common issue with Meshy models)
+    // Compute bounding box ON THE SAME CLONE (avoids creating a second clone)
+    const box = new THREE.Box3().setFromObject(clone)
+    clone.userData._offsetY = -box.min.y
+    clone.userData._offsetX = -box.getCenter(new THREE.Vector3()).x
+    clone.userData._offsetZ = -box.getCenter(new THREE.Vector3()).z
+    return clone
+  }, [scene, url])
+
+  // Cleanup: dispose geometries and materials when component unmounts
+  useEffect(() => {
+    return () => {
+      clonedScene.traverse((obj) => {
+        if (obj.geometry) obj.geometry.dispose()
+        if (obj.material) {
+          if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose())
+          else obj.material.dispose()
+        }
+      })
+    }
+  }, [clonedScene])
+
+  const offsetX = clonedScene.userData._offsetX ?? 0
+  const offsetY = clonedScene.userData._offsetY ?? 0
+  const offsetZ = clonedScene.userData._offsetZ ?? 0
+
+  // Strip root-level position animation tracks (prevent snap-to-origin bug)
   const cleanedAnimations = useMemo(() => {
     return animations.map(clip => {
       const newTracks = clip.tracks.filter(track => {
-        // Remove position tracks on the root node (they cause the "snap to center" bug)
         const isRootPosition = (
           track.name.endsWith('.position') &&
           (track.name === '.position' ||
@@ -43,41 +74,40 @@ function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isSele
       })
       return new THREE.AnimationClip(clip.name, clip.duration, newTracks, clip.blendMode)
     })
-  }, [animations, clonedScene])
+  }, [animations, clonedScene.name])
 
-  // Setup animations on the inner group (isolated from offset wrapper)
+  // Bind animations to the inner group (isolated from the centering wrapper)
   const { actions, names } = useAnimations(cleanedAnimations, animGroupRef)
 
   useEffect(() => {
-    if (names.length > 0) {
-      const targetName = names.find(n =>
-        n.toLowerCase().includes(animationName.toLowerCase())
-      ) || names[0]
+    if (names.length === 0) return
+    let targetName = animationName
 
-      Object.values(actions).forEach(a => a?.fadeOut(0.3))
-      const action = actions[targetName]
-      if (action) {
-        action.reset().fadeIn(0.3).play()
-      }
+    if (isMoving) {
+      const walkAnim = names.find(n => n.toLowerCase().includes('walk') || n.toLowerCase().includes('run'))
+      if (walkAnim) targetName = walkAnim
     }
-  }, [animationName, actions, names])
 
-  // Selection hover effect (only on the wrapper, not affected by animations)
+    const finalName = names.find(n =>
+      n.toLowerCase().includes(targetName.toLowerCase())
+    ) || names[0]
+
+    Object.values(actions).forEach(a => a?.fadeOut(0.3))
+    const action = actions[finalName]
+    if (action) action.reset().fadeIn(0.3).play()
+  }, [animationName, isMoving, actions, names])
+
+  // Bobbing effect when selected — applied to wrapper Y only
   useFrame((state) => {
-    if (wrapperRef.current) {
-      if (isSelected) {
-        const t = state.clock.elapsedTime
-        wrapperRef.current.position.y = offset.y + Math.sin(t * 2) * 0.05 + 0.05
-      } else {
-        wrapperRef.current.position.y = offset.y
-      }
-    }
+    if (!wrapperRef.current) return
+    const bob = isSelected ? Math.sin(state.clock.elapsedTime * 2) * 0.05 + 0.05 : 0
+    wrapperRef.current.position.y = offsetY + bob
   })
 
   return (
-    // Outer wrapper applies the centering offset — animations cannot touch this
-    <group ref={wrapperRef} position={[offset.x, offset.y, offset.z]}>
-      {/* Inner group is the animation target — animations only affect this subtree */}
+    // Wrapper: centers model and keeps it grounded
+    <group ref={wrapperRef} position={[offsetX, offsetY, offsetZ]}>
+      {/* Animation target group — R3F's useAnimations binds here */}
       <group ref={animGroupRef}>
         <primitive object={clonedScene} scale={scale} />
       </group>
@@ -85,7 +115,7 @@ function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isSele
   )
 }
 
-function FallbackCharacter({ team, isSelected }) {
+function FallbackCharacter({ team, isSelected, scale = [1, 1, 1] }) {
   const ref = useRef()
 
   useFrame((state) => {
@@ -101,7 +131,7 @@ function FallbackCharacter({ team, isSelected }) {
   const color = team === 'A' ? '#3b82f6' : '#ef4444'
 
   return (
-    <group ref={ref} position={[0, 0.4, 0]}>
+    <group ref={ref} position={[0, 0.4, 0]} scale={scale}>
       {/* Body */}
       <mesh>
         <capsuleGeometry args={[0.15, 0.35, 8, 16]} />
@@ -122,11 +152,74 @@ function FallbackCharacter({ team, isSelected }) {
 }
 
 export default function Character({ character }) {
+  const groupRef = useRef()
+  const [isMoving, setIsMoving] = useState(false)
   const selectCharacter = useGameStore(s => s.selectCharacter)
   const selectedCharacterId = useGameStore(s => s.selectedCharacterId)
   const isSelected = selectedCharacterId === character.id
 
   const worldPos = useMemo(() => gridToWorld(character.gridX, character.gridZ), [character.gridX, character.gridZ])
+  const targetPos = useMemo(() => new THREE.Vector3(worldPos.x, 0, worldPos.z), [worldPos])
+
+  const registered = useRef(false)
+  // Rotation target: store rotationY (degrees) when idle, movement angle when walking
+  const targetRotY  = useRef((character.rotationY || 0) * (Math.PI / 180))
+
+  // Sync targetRotY when store rotationY changes (manual rotation buttons)
+  useEffect(() => {
+    targetRotY.current = (character.rotationY || 0) * (Math.PI / 180)
+  }, [character.rotationY])
+
+  useEffect(() => {
+    return () => unregisterCharacterPosition(character.id)
+  }, [character.id])
+
+  useFrame((state, delta) => {
+    if (!groupRef.current) return
+
+    // Registra a posição viva na primeira vez que o ref fica disponível
+    if (!registered.current) {
+      groupRef.current.position.set(worldPos.x, 0, worldPos.z)
+      registerCharacterPosition(character.id, groupRef.current.position)
+      registered.current = true
+    }
+
+    const currentPos = groupRef.current.position
+    const distance = currentPos.distanceTo(targetPos)
+
+    if (distance > 0.05) {
+      if (!isMoving) setIsMoving(true)
+
+      const moveSpeed = 4 * delta
+      const t = Math.min(moveSpeed / distance, 1)
+      currentPos.lerp(targetPos, t)
+
+      const dx = targetPos.x - currentPos.x
+      const dz = targetPos.z - currentPos.z
+      const len = Math.sqrt(dx * dx + dz * dz)
+      if (len > 0.001) {
+        updateCharacterFacing(character.id, dx / len, dz / len)
+        // While moving: target rotation = direction of movement
+        const movingAngle = Math.atan2(dx, dz)
+        targetRotY.current = movingAngle
+      }
+    } else {
+      if (isMoving) setIsMoving(false)
+      currentPos.copy(targetPos)
+      // When stopped: facing is based on store rotationY
+      const storeAngle = (character.rotationY || 0) * (Math.PI / 180)
+      const fx = Math.sin(storeAngle)
+      const fz = Math.cos(storeAngle)
+      updateCharacterFacing(character.id, fx, fz)
+    }
+
+    // Smooth rotation toward target (whether moving or idle)
+    let currentAngle = groupRef.current.rotation.y
+    let diff = targetRotY.current - currentAngle
+    while (diff < -Math.PI) diff += Math.PI * 2
+    while (diff > Math.PI) diff -= Math.PI * 2
+    groupRef.current.rotation.y += diff * Math.min(8 * delta, 1)
+  })
 
   if (!character.alive) return null
 
@@ -135,6 +228,10 @@ export default function Character({ character }) {
 
   return (
     <group
+      ref={groupRef}
+      // Initial position will be 0,0,0, but useFrame will lerp it.
+      // If we want it to spawn instantly at the right place, we'd need to set it on mount.
+      // We can initialize position directly in JSX:
       position={[worldPos.x, 0, worldPos.z]}
       onClick={(e) => {
         e.stopPropagation()
@@ -143,17 +240,19 @@ export default function Character({ character }) {
       onPointerOver={() => { document.body.style.cursor = 'pointer' }}
       onPointerOut={() => { document.body.style.cursor = 'default' }}
     >
-      <Suspense fallback={<FallbackCharacter team={character.team} isSelected={isSelected} />}>
+      <Suspense fallback={<FallbackCharacter team={character.team} isSelected={isSelected} scale={character.scale} />}>
         {character.modelUrl ? (
           <CharacterModel
+            key={character.modelUrl}
             url={character.modelUrl}
             scale={character.scale}
             animationName={character.animationName}
+            isMoving={isMoving}
             isSelected={isSelected}
             team={character.team}
           />
         ) : (
-          <FallbackCharacter team={character.team} isSelected={isSelected} />
+          <FallbackCharacter team={character.team} isSelected={isSelected} scale={character.scale} />
         )}
       </Suspense>
 
