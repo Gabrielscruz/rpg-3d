@@ -25,12 +25,16 @@ export default function CameraController() {
   const lastMouseX   = useRef(0)
   const currentLookAt = useRef(new THREE.Vector3(0, 0, 0))
 
-  // Registra eventos de mouse no canvas para arrastar e orbitar
+  // Ref para evitar stale closure — os event listeners sempre lêem o valor atual
+  const gameStateRef = useRef(gameState)
+  useEffect(() => { gameStateRef.current = gameState }, [gameState])
+
+  // Registra eventos de mouse no canvas APENAS UMA VEZ (sem gameState na dependency array)
   useEffect(() => {
     const canvas = gl.domElement
 
     const onMouseDown = (e) => {
-      if (gameState !== 'playing') return
+      if (gameStateRef.current !== 'playing') return
       if (e.button === 2) { // botão direito
         isDragging.current = true
         lastMouseX.current = e.clientX
@@ -50,7 +54,7 @@ export default function CameraController() {
 
     // Touch support (mobile)
     const onTouchStart = (e) => {
-      if (gameState !== 'playing') return
+      if (gameStateRef.current !== 'playing') return
       if (e.touches.length === 1) {
         isDragging.current = true
         lastMouseX.current = e.touches[0].clientX
@@ -81,7 +85,7 @@ export default function CameraController() {
       canvas.removeEventListener('touchmove',   onTouchMove)
       canvas.removeEventListener('touchend',    onTouchEnd)
     }
-  }, [gl, gameState])
+  }, [gl]) // ← gl apenas, sem gameState — evita re-bind a cada mudança de turno
 
   // Reset câmera ao entrar/sair do jogo
   useEffect(() => {

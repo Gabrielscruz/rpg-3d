@@ -1,5 +1,6 @@
 import React from 'react'
 import useGameStore from '../../store/gameStore'
+import { BOARD_THEMES } from '../Game/Board'
 
 export default function Sidebar() {
   const characters = useGameStore(s => s.characters)
@@ -10,6 +11,8 @@ export default function Sidebar() {
   const gameState = useGameStore(s => s.gameState)
   const turnOrder = useGameStore(s => s.turnOrder)
   const currentTurnIndex = useGameStore(s => s.currentTurnIndex)
+  const boardTheme = useGameStore(s => s.boardTheme)
+  const setBoardTheme = useGameStore(s => s.setBoardTheme)
 
   const currentTurnId = turnOrder[currentTurnIndex]
 
@@ -44,6 +47,43 @@ export default function Sidebar() {
           </div>
         )}
       </div>
+
+      {/* Theme selector during setup */}
+      {gameState === 'setup' && (
+        <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+          <div style={{
+            fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase',
+            letterSpacing: 1.5, fontWeight: 700, marginBottom: 6, fontFamily: 'var(--font-title)',
+          }}>
+            🎨 Tema do Chão
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+            {Object.entries(BOARD_THEMES).map(([key, theme]) => (
+              <button
+                key={key}
+                onClick={() => setBoardTheme(key)}
+                style={{
+                  padding: '6px 4px',
+                  fontSize: 11,
+                  border: boardTheme === key ? '2px solid var(--accent-gold)' : '1px solid var(--border-subtle)',
+                  borderRadius: 6,
+                  background: boardTheme === key
+                    ? `linear-gradient(135deg, ${theme.cellEven}, ${theme.cellOdd})`
+                    : 'var(--surface-secondary)',
+                  color: boardTheme === key ? 'var(--accent-gold)' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontWeight: boardTheme === key ? 700 : 400,
+                  transition: 'all 0.15s ease',
+                  textAlign: 'center',
+                  lineHeight: 1.3,
+                }}
+              >
+                {theme.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="sidebar-content">
         {characters.length === 0 ? (

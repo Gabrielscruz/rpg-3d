@@ -7,7 +7,7 @@ import useGameStore from '../../store/gameStore'
 import { gridToWorld } from '../../utils/gridUtils'
 import { registerCharacterPosition, unregisterCharacterPosition, updateCharacterFacing } from '../../utils/characterRegistry'
 
-function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isMoving, isSelected, team }) {
+function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isMoving, isAttacking, isSelected, team }) {
   const wrapperRef  = useRef()
   const animGroupRef = useRef()
   const { scene, animations } = useGLTF(url)
@@ -83,7 +83,16 @@ function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isMovi
     if (names.length === 0) return
     let targetName = animationName
 
-    if (isMoving) {
+    if (isAttacking) {
+      // Procura animação de ataque: attack, slash, swing, chop, cast, shoot
+      const atkAnim = names.find(n => {
+        const low = n.toLowerCase()
+        return low.includes('attack') || low.includes('slash') || low.includes('swing')
+          || low.includes('chop') || low.includes('cast') || low.includes('shoot')
+          || low.includes('melee') || low.includes('1h_') || low.includes('2h_')
+      })
+      if (atkAnim) targetName = atkAnim
+    } else if (isMoving) {
       const walkAnim = names.find(n => n.toLowerCase().includes('walk') || n.toLowerCase().includes('run'))
       if (walkAnim) targetName = walkAnim
     }
@@ -94,8 +103,16 @@ function CharacterModel({ url, scale = [1, 1, 1], animationName = 'idle', isMovi
 
     Object.values(actions).forEach(a => a?.fadeOut(0.3))
     const action = actions[finalName]
-    if (action) action.reset().fadeIn(0.3).play()
-  }, [animationName, isMoving, actions, names])
+    if (action) {
+      if (isAttacking) {
+        // Ataque: toca uma vez, não repete em loop
+        action.reset().setLoop(THREE.LoopOnce, 1).clampWhenFinished = true
+        action.fadeIn(0.15).play()
+      } else {
+        action.reset().setLoop(THREE.LoopRepeat).fadeIn(0.3).play()
+      }
+    }
+  }, [animationName, isMoving, isAttacking, actions, names])
 
   // Bobbing effect when selected — applied to wrapper Y only
   useFrame((state) => {
@@ -248,6 +265,7 @@ export default function Character({ character }) {
             scale={character.scale}
             animationName={character.animationName}
             isMoving={isMoving}
+            isAttacking={!!character.isAttacking}
             isSelected={isSelected}
             team={character.team}
           />

@@ -25,6 +25,8 @@ const useGameStore = create((set, get) => ({
   combatLog: [],
   placementMode: null, // null | 'character' | 'scenario'
   placementId: null, // ID of the character or scenario being placed
+  boardTheme: 'dungeon', // 'dungeon' | 'grass' | 'stone' | 'sand' | 'ice' | 'lava'
+  setBoardTheme: (theme) => set({ boardTheme: theme }),
 
   // === Actions: Characters ===
   addCharacter: (character) => {
@@ -288,35 +290,42 @@ const useGameStore = create((set, get) => ({
     const target = state.characters.find(c => c.id === targetId)
     if (!attacker || !target) return
 
-    const baseDamage = Math.max(1, attacker.attack - target.defense)
-    const variance = Math.floor(Math.random() * 5) - 2
-    const damage = Math.max(1, baseDamage + variance)
-    const isCritical = Math.random() < 0.15
-    const finalDamage = isCritical ? damage * 2 : damage
+    // 1. Virar atacante na direção do alvo
+    const dx = target.gridX - attacker.gridX
+    const dz = target.gridZ - attacker.gridZ
+    const angleToTarget = Math.atan2(dx, dz) * (180 / Math.PI)
+    get().updateCharacter(attackerId, { rotationY: ((angleToTarget % 360) + 360) % 360, isAttacking: true })
 
-    const newHp = Math.max(0, target.hp - finalDamage)
-    const alive = newHp > 0
+    // 2. Limpar highlights imediatamente
+    set({ actionMode: null, highlightedCells: [] })
 
-    get().updateCharacter(targetId, { hp: newHp, alive })
-    get().updateCharacter(attackerId, { hasActed: true })
+    // 3. Atraso para animação de ataque, depois aplica dano
+    setTimeout(() => {
+      const baseDamage = Math.max(1, attacker.attack - target.defense)
+      const variance = Math.floor(Math.random() * 5) - 2
+      const damage = Math.max(1, baseDamage + variance)
+      const isCritical = Math.random() < 0.15
+      const finalDamage = isCritical ? damage * 2 : damage
 
-    const logEntries = [...state.combatLog]
-    if (isCritical) {
-      logEntries.push({ text: `💥 CRÍTICO! ${attacker.name} causa ${finalDamage} de dano em ${target.name}!`, type: 'critical' })
-    } else {
-      logEntries.push({ text: `⚔️ ${attacker.name} causa ${finalDamage} de dano em ${target.name}`, type: 'attack' })
-    }
-    if (!alive) {
-      logEntries.push({ text: `💀 ${target.name} foi derrotado!`, type: 'death' })
-    }
+      const newHp = Math.max(0, target.hp - finalDamage)
+      const alive = newHp > 0
 
-    set({
-      combatLog: logEntries,
-      actionMode: null,
-      highlightedCells: [],
-    })
+      get().updateCharacter(targetId, { hp: newHp, alive })
+      get().updateCharacter(attackerId, { hasActed: true, isAttacking: false })
 
-    setTimeout(() => get().checkVictory(), 100)
+      const logEntries = [...get().combatLog]
+      if (isCritical) {
+        logEntries.push({ text: `💥 CRÍTICO! ${attacker.name} causa ${finalDamage} de dano em ${target.name}!`, type: 'critical' })
+      } else {
+        logEntries.push({ text: `⚔️ ${attacker.name} causa ${finalDamage} de dano em ${target.name}`, type: 'attack' })
+      }
+      if (!alive) {
+        logEntries.push({ text: `💀 ${target.name} foi derrotado!`, type: 'death' })
+      }
+
+      set({ combatLog: logEntries })
+      setTimeout(() => get().checkVictory(), 100)
+    }, 800) // 800ms para animação de ataque
   },
 
   // === Actions: Victory Check ===

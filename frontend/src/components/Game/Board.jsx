@@ -3,17 +3,49 @@ import * as THREE from 'three'
 import useGameStore from '../../store/gameStore'
 import { GRID_SIZE, gridToWorld } from '../../utils/gridUtils'
 
-export const BOARD_COLORS = {
-  base: '#161626',      // Lighter than #0d0d1a
-  cellEven: '#22223b',  // Lighter than #1a1a2e
-  cellOdd: '#1a1a2e',   // Lighter than #16162a
-  blocked: '#2a2a3e',   // Lighter than #1e1e2e
-  occupied: '#3a3a5a',  // Lighter than #2a2a4a
-  gridLineAlpha: '#3a3a50',
-  gridLineBeta: '#2a2a40'
+export const BOARD_THEMES = {
+  dungeon: {
+    name: '🏚️ Calabouço',
+    base: '#161626', cellEven: '#22223b', cellOdd: '#1a1a2e',
+    blocked: '#2a2a3e', occupied: '#3a3a5a',
+    gridLineAlpha: '#3a3a50', gridLineBeta: '#2a2a40',
+  },
+  grass: {
+    name: '🌿 Planície',
+    base: '#1a2e1a', cellEven: '#2d4a2d', cellOdd: '#234023',
+    blocked: '#3b3b2a', occupied: '#3a5a3a',
+    gridLineAlpha: '#4a6a40', gridLineBeta: '#365030',
+  },
+  stone: {
+    name: '🪨 Pedra',
+    base: '#2a2a2a', cellEven: '#3d3d3d', cellOdd: '#333333',
+    blocked: '#4a4040', occupied: '#505050',
+    gridLineAlpha: '#555555', gridLineBeta: '#444444',
+  },
+  sand: {
+    name: '🏜️ Deserto',
+    base: '#3a2e1a', cellEven: '#5a4a30', cellOdd: '#4d3f28',
+    blocked: '#4a3a20', occupied: '#6a5a3a',
+    gridLineAlpha: '#6a5a40', gridLineBeta: '#554830',
+  },
+  ice: {
+    name: '❄️ Gelo',
+    base: '#1a2a3a', cellEven: '#2a4a6a', cellOdd: '#234060',
+    blocked: '#3a4a5a', occupied: '#4a6a8a',
+    gridLineAlpha: '#5a7a9a', gridLineBeta: '#4a6a80',
+  },
+  lava: {
+    name: '🌋 Vulcão',
+    base: '#2a1010', cellEven: '#3a1818', cellOdd: '#301515',
+    blocked: '#4a2020', occupied: '#5a2a2a',
+    gridLineAlpha: '#6a3030', gridLineBeta: '#502020',
+  },
 }
 
-function GridCell({ x, z, isHighlighted, isRangeOnly, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, onClick }) {
+// Compatibilidade: exporta o tema padrão como BOARD_COLORS
+export const BOARD_COLORS = BOARD_THEMES.dungeon
+
+function GridCell({ x, z, isHighlighted, isRangeOnly, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, themeColors, onClick }) {
   const ref = useRef()
   const pos = useMemo(() => gridToWorld(x, z), [x, z])
 
@@ -22,15 +54,15 @@ function GridCell({ x, z, isHighlighted, isRangeOnly, isOccupied, isBlocked, isS
     if (isSelected) return '#7c3aed'
     if (isHighlighted && !isRangeOnly) return highlightColor || '#22c55e'   // target / move
     if (isRangeOnly) return '#ef4444'                                        // area vazia
-    if (isBlocked) return BOARD_COLORS.blocked
-    if (isOccupied) return BOARD_COLORS.occupied
-    return (x + z) % 2 === 0 ? BOARD_COLORS.cellEven : BOARD_COLORS.cellOdd
-  }, [isHighlighted, isRangeOnly, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, x, z])
+    if (isBlocked) return themeColors.blocked
+    if (isOccupied) return themeColors.occupied
+    return (x + z) % 2 === 0 ? themeColors.cellEven : themeColors.cellOdd
+  }, [isHighlighted, isRangeOnly, isOccupied, isBlocked, isSelected, isPlacementMode, highlightColor, x, z, themeColors])
 
   const opacity = useMemo(() => {
     if (isPlacementMode && !isOccupied && !isBlocked) return 0.5
-    if (isHighlighted && !isRangeOnly) return 0.7  // inimigo / tile de movimento: destaque forte
-    if (isRangeOnly) return 0.18                   // área de alcance: fraco e transparente
+    if (isHighlighted && !isRangeOnly) return 0.7
+    if (isRangeOnly) return 0.18
     if (isSelected) return 0.7
     return 0.4
   }, [isHighlighted, isRangeOnly, isSelected, isPlacementMode, isOccupied, isBlocked])
@@ -85,7 +117,9 @@ export default function Board() {
   const placementMode = useGameStore(s => s.placementMode)
   const placementId = useGameStore(s => s.placementId)
   const placeObject = useGameStore(s => s.placeObject)
+  const boardTheme = useGameStore(s => s.boardTheme)
 
+  const themeColors = BOARD_THEMES[boardTheme] || BOARD_THEMES.dungeon
   const isPlacementMode = !!placementMode
 
   const highlightSet = useMemo(() => {
@@ -148,13 +182,11 @@ export default function Board() {
         const isBlocked      = blockedCells.has(key)
         const isSelected     = selectedChar && selectedChar.gridX === x && selectedChar.gridZ === z
 
-        // isRangeOnly = está na área de alcance MAS não é um inimigo atacável
         const isRangeOnly    = isHighlighted && !!highlightData?.isRange && !highlightData?.charId
-        // isEnemy = está no alcance E tem um inimigo na célula
         const isEnemy        = isHighlighted && !!highlightData?.charId
 
-        let highlightColor = '#22c55e'          // movimento: verde
-        if (isEnemy) highlightColor = '#ef4444' // inimigo no alcance: vermelho forte
+        let highlightColor = '#22c55e'
+        if (isEnemy) highlightColor = '#ef4444'
 
         result.push(
           <GridCell
@@ -168,13 +200,14 @@ export default function Board() {
             isSelected={isSelected}
             isPlacementMode={isPlacementMode}
             highlightColor={highlightColor}
+            themeColors={themeColors}
             onClick={handleCellClick}
           />
         )
       }
     }
     return result
-  }, [highlightSet, occupiedSet, blockedCells, selectedChar, gameState, actionMode, isPlacementMode])
+  }, [highlightSet, occupiedSet, blockedCells, selectedChar, gameState, actionMode, isPlacementMode, themeColors])
 
   const borderSize = GRID_SIZE
 
@@ -183,7 +216,7 @@ export default function Board() {
       {/* Base plane */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
         <planeGeometry args={[borderSize + 0.5, borderSize + 0.5]} />
-        <meshStandardMaterial color={BOARD_COLORS.base} />
+        <meshStandardMaterial color={themeColors.base} />
       </mesh>
 
       {/* Grid cells */}
@@ -191,7 +224,7 @@ export default function Board() {
 
       {/* Grid lines (subtle) */}
       <gridHelper
-        args={[GRID_SIZE, GRID_SIZE, BOARD_COLORS.gridLineAlpha, BOARD_COLORS.gridLineBeta]}
+        args={[GRID_SIZE, GRID_SIZE, themeColors.gridLineAlpha, themeColors.gridLineBeta]}
         position={[0, 0.02, 0]}
       />
     </group>
