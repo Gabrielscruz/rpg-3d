@@ -173,10 +173,24 @@ export default function Character({ character }) {
   const [isMoving, setIsMoving] = useState(false)
   const selectCharacter = useGameStore(s => s.selectCharacter)
   const selectedCharacterId = useGameStore(s => s.selectedCharacterId)
+  const setContextMenu = useGameStore(s => s.setContextMenu)
+  const placementId = useGameStore(s => s.placementId)
+  const gameState = useGameStore(s => s.gameState)
+  const actionMode = useGameStore(s => s.actionMode)
+  const highlightedCells = useGameStore(s => s.highlightedCells)
   const isSelected = selectedCharacterId === character.id
+  const isBeingPlaced = placementId === character.id
 
-  const worldPos = useMemo(() => gridToWorld(character.gridX, character.gridZ), [character.gridX, character.gridZ])
-  const targetPos = useMemo(() => new THREE.Vector3(worldPos.x, 0, worldPos.z), [worldPos])
+  const sizeX = Math.max(1, Math.round(character.scale?.[0] || 1))
+  const sizeZ = Math.max(1, Math.round(character.scale?.[2] || 1))
+
+  const worldPos = useMemo(() => {
+    const gridXCenter = Math.max(0, character.gridX) + (sizeX - 1) / 2
+    const gridZCenter = Math.max(0, character.gridZ) + (sizeZ - 1) / 2
+    return gridToWorld(gridXCenter, gridZCenter)
+  }, [character.gridX, character.gridZ, sizeX, sizeZ])
+
+  const targetPos = useMemo(() => new THREE.Vector3(worldPos.x, isBeingPlaced ? 0.5 : 0, worldPos.z), [worldPos, isBeingPlaced])
 
   const registered = useRef(false)
   // Rotation target: store rotationY (degrees) when idle, movement angle when walking
@@ -243,6 +257,8 @@ export default function Character({ character }) {
   // Don't render characters that are pending placement
   if (character.gridX < 0 || character.gridZ < 0) return null
 
+  const ringRadius = Math.max(sizeX, sizeZ) * 0.5 * 1.1
+
   return (
     <group
       ref={groupRef}
@@ -251,11 +267,34 @@ export default function Character({ character }) {
       // We can initialize position directly in JSX:
       position={[worldPos.x, 0, worldPos.z]}
       onClick={(e) => {
+        // If the game is playing and an action is active, and this character is on a highlighted cell that matches the action target, let the click pass to the GridCell below
+        const isTargetable = gameState === 'playing' && (actionMode === 'attack' || actionMode === 'spell') && 
+          highlightedCells.some(c => {
+            return c.charId === character.id &&
+              c.x >= character.gridX && c.x < character.gridX + sizeX &&
+              c.z >= character.gridZ && c.z < character.gridZ + sizeZ;
+          });
+        
+        if (isTargetable) {
+          // Do not stop propagation, so the GridCell underneath handles the attack
+          return
+        }
+        
         e.stopPropagation()
         selectCharacter(character.id)
       }}
       onPointerOver={() => { document.body.style.cursor = 'pointer' }}
       onPointerOut={() => { document.body.style.cursor = 'default' }}
+      onContextMenu={(e) => {
+        e.stopPropagation()
+        e.nativeEvent.preventDefault()
+        setContextMenu({
+          x: e.nativeEvent.clientX,
+          y: e.nativeEvent.clientY,
+          targetType: 'character',
+          targetId: character.id
+        })
+      }}
     >
       <Suspense fallback={<FallbackCharacter team={character.team} isSelected={isSelected} scale={character.scale} />}>
         {character.modelUrl ? (
@@ -277,23 +316,10 @@ export default function Character({ character }) {
       {/* Selection ring */}
       {isSelected && (
         <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.35, 0.42, 32]} />
+          <ringGeometry args={[ringRadius - 0.08, ringRadius, 32]} />
           <meshBasicMaterial color="#fbbf24" transparent opacity={0.8} />
         </mesh>
       )}
-
-      {/* HP bar floating above character */}
-      <sprite position={[0, 2.2, 0]} scale={[0.8, 0.08, 1]}>
-        <spriteMaterial color="#333" transparent opacity={0.6} />
-      </sprite>
-      <sprite
-        position={[(character.hp / character.maxHp - 1) * 0.4, 2.2, 0]}
-        scale={[(character.hp / character.maxHp) * 0.78, 0.06, 1]}
-      >
-        <spriteMaterial
-          color={character.hp > character.maxHp * 0.5 ? '#22c55e' : character.hp > character.maxHp * 0.25 ? '#f59e0b' : '#ef4444'}
-        />
-      </sprite>
     </group>
   )
 }

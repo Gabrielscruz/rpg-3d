@@ -7,13 +7,15 @@ import CharacterPanel from './components/UI/CharacterPanel'
 import CombatLog from './components/UI/CombatLog'
 import ImportModal from './components/UI/ImportModal'
 import GameOver from './components/UI/GameOver'
+import TransformPanel from './components/UI/TransformPanel'
+import ContextMenu from './components/UI/ContextMenu'
 
 export default function App() {
   return (
     <div className="app-container">
       <div className="game-area">
         {/* 3D Canvas */}
-        <div className="canvas-wrapper">
+        <div className="canvas-wrapper" onContextMenu={(e) => e.preventDefault()}>
           <GameScene />
 
           {/* UI Overlays */}
@@ -21,6 +23,7 @@ export default function App() {
           <CharacterPanel />
           <ActionBar />
           <CombatLog />
+          <TransformPanel />
         </div>
 
         {/* Sidebar */}
@@ -30,6 +33,7 @@ export default function App() {
       {/* Modals */}
       <ImportModal />
       <GameOver />
+      <ContextMenu />
     </div>
   )
 }

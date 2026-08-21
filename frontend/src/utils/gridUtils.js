@@ -18,11 +18,13 @@ export function getDistance(x1, z1, x2, z2) {
   return Math.abs(x1 - x2) + Math.abs(z1 - z2)
 }
 
-/**
- * Check if a cell is occupied by a character
- */
-export function isCellOccupied(x, z, characters) {
-  return characters.some(c => c.alive && c.gridX === x && c.gridZ === z)
+export function isCellOccupied(x, z, characters, excludeId) {
+  return characters.some(c => {
+    if (!c.alive || c.id === excludeId || c.gridX < 0 || c.gridZ < 0) return false
+    const sizeX = Math.max(1, Math.round(c.scaleX || c.scale?.[0] || 1))
+    const sizeZ = Math.max(1, Math.round(c.scaleZ || c.scale?.[2] || 1))
+    return x >= c.gridX && x < c.gridX + sizeX && z >= c.gridZ && z < c.gridZ + sizeZ
+  })
 }
 
 /**
@@ -52,7 +54,7 @@ export function getReachableCells(startX, startZ, moveRange, characters, blocked
     const { x, z, dist } = queue.shift()
 
     if (dist > 0) {
-      const occupied = characters.some(c => c.alive && c.id !== excludeId && c.gridX === x && c.gridZ === z)
+      const occupied = isCellOccupied(x, z, characters, excludeId)
       if (!occupied) {
         reachable.push({ x, z, dist })
       }
@@ -68,12 +70,8 @@ export function getReachableCells(startX, startZ, moveRange, characters, blocked
         if (visited.has(key)) continue
         if (isCellBlocked(nx, nz, blockedCells)) continue
 
-        const occupiedByAlive = characters.some(c => c.alive && c.id !== excludeId && c.gridX === nx && c.gridZ === nz)
         visited.add(key)
-
-        // Can pass through but not stop on occupied cells
         queue.push({ x: nx, z: nz, dist: dist + 1 })
-        // Only exclude occupied cells from reachable, not from traversal
       }
     }
   }
@@ -89,9 +87,25 @@ export function getAttackableCells(startX, startZ, range, characters, team) {
   for (const char of characters) {
     if (!char.alive) continue
     if (char.team === team) continue
-    const dist = getDistance(startX, startZ, char.gridX, char.gridZ)
-    if (dist <= range) {
-      targets.push({ x: char.gridX, z: char.gridZ, charId: char.id })
+
+    const sizeX = Math.max(1, Math.round(char.scaleX || char.scale?.[0] || 1))
+    const sizeZ = Math.max(1, Math.round(char.scaleZ || char.scale?.[2] || 1))
+    let minDist = Infinity
+
+    for (let dx = 0; dx < sizeX; dx++) {
+      for (let dz = 0; dz < sizeZ; dz++) {
+        const d = getDistance(startX, startZ, char.gridX + dx, char.gridZ + dz)
+        if (d < minDist) minDist = d
+      }
+    }
+
+    if (minDist <= range) {
+      // Map all cells they cover as targets
+      for (let dx = 0; dx < sizeX; dx++) {
+        for (let dz = 0; dz < sizeZ; dz++) {
+          targets.push({ x: char.gridX + dx, z: char.gridZ + dz, charId: char.id })
+        }
+      }
     }
   }
   return targets
@@ -106,9 +120,24 @@ export function getAllCellsInRange(startX, startZ, range, characters, team) {
   for (const char of characters) {
     if (!char.alive) continue
     if (char.team === team) continue
-    const dist = getDistance(startX, startZ, char.gridX, char.gridZ)
-    if (dist <= range) {
-      enemySet.set(`${char.gridX},${char.gridZ}`, char.id)
+
+    const sizeX = Math.max(1, Math.round(char.scaleX || char.scale?.[0] || 1))
+    const sizeZ = Math.max(1, Math.round(char.scaleZ || char.scale?.[2] || 1))
+    let minDist = Infinity
+
+    for (let dx = 0; dx < sizeX; dx++) {
+      for (let dz = 0; dz < sizeZ; dz++) {
+        const d = getDistance(startX, startZ, char.gridX + dx, char.gridZ + dz)
+        if (d < minDist) minDist = d
+      }
+    }
+
+    if (minDist <= range) {
+      for (let dx = 0; dx < sizeX; dx++) {
+        for (let dz = 0; dz < sizeZ; dz++) {
+          enemySet.set(`${char.gridX + dx},${char.gridZ + dz}`, char.id)
+        }
+      }
     }
   }
 

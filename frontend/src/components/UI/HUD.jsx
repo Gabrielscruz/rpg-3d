@@ -9,6 +9,8 @@ export default function HUD() {
   const toggleImportModal = useGameStore(s => s.toggleImportModal)
   const resetGame = useGameStore(s => s.resetGame)
   const restartBattle = useGameStore(s => s.restartBattle)
+  const placementMode = useGameStore(s => s.placementMode)
+  const cancelPlacement = useGameStore(s => s.cancelPlacement)
 
   const hasEnoughPlayers = characters.length >= 2
   const hasTeamA = characters.some(c => c.team === 'A')
@@ -17,6 +19,76 @@ export default function HUD() {
 
   return (
     <div className="hud-top">
+      {placementMode && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'rgba(20, 16, 35, 0.85)',
+          border: '1.5px solid var(--accent-purple)',
+          borderRadius: '10px',
+          padding: '10px 24px',
+          color: 'var(--text-primary)',
+          zIndex: 1000,
+          boxShadow: '0 8px 32px rgba(124, 58, 237, 0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 16,
+          backdropFilter: 'blur(8px)',
+          fontFamily: 'var(--font-title)',
+          fontSize: '13px',
+          pointerEvents: 'auto',
+          animation: 'pulseGlow 2s infinite alternate',
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 16 }}>📍</span> <strong>Modo Posicionar</strong>
+          </span>
+          <span style={{ opacity: 0.3 }}>|</span>
+          <span style={{ color: 'var(--text-secondary)' }}>
+            Mova o mouse para posicionar o item
+          </span>
+          <span style={{ opacity: 0.3 }}>|</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            Girar: <kbd style={{
+              background: 'rgba(124, 58, 237, 0.3)',
+              border: '1px solid rgba(124, 58, 237, 0.6)',
+              padding: '2px 6px',
+              borderRadius: 4,
+              fontFamily: 'monospace',
+              fontSize: 11,
+              color: 'var(--accent-gold)'
+            }}>R</kbd>
+          </span>
+          <span style={{ opacity: 0.3 }}>|</span>
+          <button 
+            onClick={cancelPlacement} 
+            style={{ 
+              background: 'rgba(239, 68, 68, 0.2)', 
+              border: '1px solid rgba(239, 68, 68, 0.4)', 
+              color: '#fca5a5', 
+              padding: '5px 12px', 
+              borderRadius: '6px', 
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 'bold',
+              transition: 'all 0.2s',
+              fontFamily: 'var(--font-main)'
+            }}
+            onMouseOver={e => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.4)'
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.8)'
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'
+              e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)'
+            }}
+          >
+            Cancelar (Esc)
+          </button>
+        </div>
+      )}
+
       <div className="game-title">⚔️ RPG Ação</div>
 
       {gameState === 'playing' && <TurnIndicator />}
